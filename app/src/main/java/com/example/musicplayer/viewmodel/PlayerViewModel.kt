@@ -142,17 +142,38 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun togglePlay() = controller?.let { if (it.isPlaying) it.pause() else it.play() }
-    fun next() = controller?.seekToNextMediaItem()
+    fun next() {
+        controller?.let { c ->
+            if (c.hasNextMediaItem()) {
+                c.seekToNextMediaItem()
+            } else {
+                c.seekToDefaultPosition(0)
+                c.play()
+            }
+        }
+    }
     fun prev() = controller?.seekToPreviousMediaItem()
     fun seekTo(ms: Long) = controller?.seekTo(ms)
 
-    fun toggleShuffle() = controller?.let { it.shuffleModeEnabled = !it.shuffleModeEnabled }
-
-    fun cycleRepeat() = controller?.let {
-        it.repeatMode = when (it.repeatMode) {
-            Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
-            Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
-            else -> Player.REPEAT_MODE_OFF
+    /**
+     * 播放模式循环：顺序播放 → 列表循环 → 单曲循环 → 随机播放 → 顺序播放
+     */
+    fun cyclePlayMode() = controller?.let { c ->
+        when {
+            c.shuffleModeEnabled -> {
+                c.shuffleModeEnabled = false
+                c.repeatMode = Player.REPEAT_MODE_OFF
+            }
+            c.repeatMode == Player.REPEAT_MODE_OFF -> {
+                c.repeatMode = Player.REPEAT_MODE_ALL
+            }
+            c.repeatMode == Player.REPEAT_MODE_ALL -> {
+                c.repeatMode = Player.REPEAT_MODE_ONE
+            }
+            else -> {
+                c.repeatMode = Player.REPEAT_MODE_OFF
+                c.shuffleModeEnabled = true
+            }
         }
     }
 
@@ -167,7 +188,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             var lyrics = ""
             var embeddedArt: ByteArray? = null
 
-            // 用 MediaMetadataRetriever 读取内嵌封面
             runCatching {
                 val retriever = android.media.MediaMetadataRetriever()
                 retriever.setDataSource(context, track.uri)
@@ -177,13 +197,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 retriever.release()
             }
 
-            // 找同名 .lrc 文件
             lyrics = findLrcSidecar(context, track) ?: ""
-
-            // 清理 .lrc 时间标签，只显示文本
             lyrics = stripLrcTimestamps(lyrics)
 
-            // 封面缓存文件写入放在 IO 线程
             var artUri: Uri? = track.albumArtUri
             if (embeddedArt != null && track.albumArtUri == null) {
                 runCatching {
@@ -202,9 +218,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    /** 查找与音频文件同目录、同名的 .lrc 文件。 */
     private fun findLrcSidecar(context: Context, track: Track): String? {
-        // MediaStore 歌曲：查询 DATA 列拿到文件路径
         if (!track.id.startsWith("folder_")) {
             runCatching {
                 context.contentResolver.query(
@@ -225,7 +239,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         return null
     }
 
-    /** 去掉 [mm:ss.xx] 时间标签，只保留歌词文本行。 */
     private fun stripLrcTimestamps(text: String): String {
         if (text.isBlank()) return ""
         val regex = Regex("""\[\d{2}:\d{2}[.:]\d{2,3}\]""")
