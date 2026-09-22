@@ -29,6 +29,7 @@ import java.util.Random
 class LanTransferService : Service() {
 
     private var server: LanHttpServer? = null
+    @Volatile private var shouldRun = false
     private val idleHandler = Handler(Looper.getMainLooper())
     private val idleRunnable = Runnable { stopService() }
 
@@ -50,13 +51,15 @@ class LanTransferService : Service() {
             stopService()
             return START_NOT_STICKY
         }
-        if (server == null) startServer()
+        if (server == null) {
+            shouldRun = true
+            Thread({ startServer() }, "lan-server").start()
+        }
         return START_STICKY
     }
 
     private fun startServer() {
         val ip = lanIp() ?: run {
-            // 未连接 Wi-Fi，无法提供服务
             stopService()
             return
         }
@@ -68,10 +71,15 @@ class LanTransferService : Service() {
             stopService()
             return
         }
+        if (!shouldRun) {
+            // 用户在后台线程启动期间已关闭服务
+            server?.stop()
+            server = null
+            return
+        }
         val port = server!!.listeningPort
         val endpoint = "http://$ip:$port?token=$token"
         LanTransferController.publishRunning(endpoint, token)
-        // 更新通知为实际链接
         val nm = getSystemService(NotificationManager::class.java)
         nm.notify(NOTIFY_ID, buildNotification(endpoint, token))
         resetIdle()
@@ -83,6 +91,7 @@ class LanTransferService : Service() {
     }
 
     private fun stopService() {
+        shouldRun = false
         idleHandler.removeCallbacks(idleRunnable)
         server?.stop()
         server = null
@@ -92,6 +101,7 @@ class LanTransferService : Service() {
     }
 
     override fun onDestroy() {
+        shouldRun = false
         idleHandler.removeCallbacks(idleRunnable)
         server?.stop()
         server = null
