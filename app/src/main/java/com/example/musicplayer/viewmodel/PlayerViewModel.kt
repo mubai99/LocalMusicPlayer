@@ -136,7 +136,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun playQueueIndex(index: Int) {
         if (index in 0 until (_queue.value.size)) {
-            controller?.seekTo(index)
+            controller?.seekTo(index, 0L)
             _currentIndex.value = index
         }
     }
