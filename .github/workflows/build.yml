@@ -34,7 +34,14 @@ jobs:
           echo "$PWD/gradle-8.4/bin" >> $GITHUB_PATH
 
       - name: Build debug APK
-        run: gradle assembleDebug --no-daemon --stacktrace
+        run: |
+          gradle assembleDebug --no-daemon --stacktrace > build.log 2>&1 || {
+            echo "## Build Failed" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            tail -80 build.log >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            exit 1
+          }
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
