@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PlaylistPlay
@@ -124,7 +125,6 @@ fun Root(libraryVm: LibraryViewModel, playerVm: PlayerViewModel) {
         } else {
             launcher.launch(permission)
         }
-        // Android 13+ 请求通知权限（锁屏/通知栏媒体控制需要）
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -195,7 +195,6 @@ private fun SongListTab(
     }
 
     Column(Modifier.fillMaxSize()) {
-        // 文件夹选择栏
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -207,7 +206,6 @@ private fun SongListTab(
             }
         }
 
-        // 已选文件夹
         if (folders.isNotEmpty()) {
             LazyRow(
                 Modifier.fillMaxWidth().padding(horizontal = 12.dp),
@@ -532,6 +530,7 @@ fun NowPlayingScreen(
     val pos by playerVm.positionMs.collectAsState()
     val dur by playerVm.durationMs.collectAsState()
     val repeat by playerVm.repeatMode.collectAsState()
+    val shuffle by playerVm.shuffle.collectAsState()
     val queue by playerVm.queue.collectAsState()
     val currentIndex by playerVm.currentIndex.collectAsState()
     val lyrics by playerVm.lyrics.collectAsState()
@@ -549,7 +548,6 @@ fun NowPlayingScreen(
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
         Box(Modifier.fillMaxSize().background(Color(0xFF121212))) {
-            // 专辑封面背景（上半屏）
             if (current!!.albumArtUri != null) {
                 AsyncImage(
                     current!!.albumArtUri, null,
@@ -566,7 +564,6 @@ fun NowPlayingScreen(
                         tint = Color.White.copy(alpha = 0.3f))
                 }
             }
-            // 渐变遮罩
             Box(
                 Modifier.fillMaxSize().background(
                     Brush.verticalGradient(
@@ -581,7 +578,6 @@ fun NowPlayingScreen(
             Column(
                 Modifier.fillMaxSize().padding(horizontal = 24.dp),
             ) {
-                // 顶栏
                 Row(
                     Modifier.fillMaxWidth().padding(top = 16.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -594,7 +590,6 @@ fun NowPlayingScreen(
 
                 Spacer(Modifier.weight(1f))
 
-                // 歌名 + 收藏
                 Row(
                     Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -629,7 +624,6 @@ fun NowPlayingScreen(
 
                 Spacer(Modifier.height(16.dp))
 
-                // 歌词
                 Box(
                     Modifier.weight(1f).fillMaxWidth(),
                     contentAlignment = Alignment.TopCenter,
@@ -653,7 +647,6 @@ fun NowPlayingScreen(
 
                 Spacer(Modifier.height(16.dp))
 
-                // 进度条
                 Slider(
                     value = sliderPos,
                     onValueChange = { sliderPos = it; dragging.value = true },
@@ -679,17 +672,21 @@ fun NowPlayingScreen(
 
                 Spacer(Modifier.height(16.dp))
 
-                // 播放控制
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    IconButton(onClick = playerVm::cycleRepeat, modifier = Modifier.size(48.dp)) {
-                        val icon = if (repeat == Player.REPEAT_MODE_ONE) Icons.Filled.RepeatOne else Icons.Filled.Repeat
+                    IconButton(onClick = playerVm::cyclePlayMode, modifier = Modifier.size(48.dp)) {
+                        val icon = when {
+                            shuffle -> Icons.Filled.Shuffle
+                            repeat == Player.REPEAT_MODE_ONE -> Icons.Filled.RepeatOne
+                            else -> Icons.Filled.Repeat
+                        }
+                        val active = shuffle || repeat != Player.REPEAT_MODE_OFF
                         Icon(
                             icon, null,
-                            tint = if (repeat != Player.REPEAT_MODE_OFF) Color(0xFFE91E63) else Color.White.copy(alpha = 0.8f),
+                            tint = if (active) Color(0xFFE91E63) else Color.White.copy(alpha = 0.8f),
                             modifier = Modifier.size(26.dp),
                         )
                     }
@@ -722,7 +719,6 @@ fun NowPlayingScreen(
                 Spacer(Modifier.height(32.dp))
             }
 
-            // 播放队列弹层
             if (showQueue) {
                 QueueSheet(
                     queue = queue,
