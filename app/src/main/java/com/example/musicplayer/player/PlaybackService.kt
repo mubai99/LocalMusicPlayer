@@ -1,16 +1,13 @@
 package com.example.musicplayer.player
 
 import android.app.PendingIntent
-import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.media3.common.AudioAttributes
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.example.musicplayer.MainActivity
-import com.example.musicplayer.R
 
 /**
  * 基于 Media3 的播放服务：
@@ -31,11 +28,6 @@ class PlaybackService : MediaSessionService() {
 
         mediaSession = MediaSession.Builder(this, player)
             .setSessionActivity(buildContentIntent())
-            .setMediaNotificationProvider(
-                DefaultMediaNotificationProvider.Builder(this)
-                    .setSmallIcon(R.drawable.ic_notification)
-                    .build(),
-            )
             .build()
     }
 
