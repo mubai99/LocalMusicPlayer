@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import androidx.core.content.ContextCompat
+import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
@@ -218,27 +219,48 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    /** 查找与音频文件同目录、同名的 .lrc 文件。 */
     private fun findLrcSidecar(context: Context, track: Track): String? {
-        if (!track.id.startsWith("folder_")) {
-            runCatching {
-                context.contentResolver.query(
-                    MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-                    arrayOf(MediaStore.Audio.Media.DATA),
-                    "${MediaStore.Audio.Media._ID} = ?",
-                    arrayOf(track.id),
-                    null,
-                )?.use { c ->
-                    if (c.moveToFirst()) {
-                        val path = c.getString(0) ?: return null
-                        val lrcFile = File(path.substringBeforeLast('.') + ".lrc")
-                        if (lrcFile.exists()) return lrcFile.readText()
+        // 文件夹扫描的歌曲：通过 DocumentFile 找同目录同名 .lrc
+        if (track.id.startsWith("folder_")) {
+            return runCatching {
+                val audioDoc = DocumentFile.fromSingleUri(context, track.uri) ?: return null
+                val parent = audioDoc.parentFile ?: return null
+                val audioName = audioDoc.name ?: return null
+                val baseName = audioName.substringBeforeLast('.')
+                parent.listFiles().forEach { child ->
+                    if (child.isFile) {
+                        val lrcName = child.name ?: return@forEach
+                        if (lrcName.equals("$baseName.lrc", ignoreCase = true)) {
+                            context.contentResolver.openInputStream(child.uri)?.use { input ->
+                                return String(input.readBytes())
+                            }
+                        }
                     }
+                }
+                null
+            }.getOrNull()
+        }
+        // MediaStore 歌曲：查询 DATA 列拿到文件路径
+        runCatching {
+            context.contentResolver.query(
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                arrayOf(MediaStore.Audio.Media.DATA),
+                "${MediaStore.Audio.Media._ID} = ?",
+                arrayOf(track.id),
+                null,
+            )?.use { c ->
+                if (c.moveToFirst()) {
+                    val path = c.getString(0) ?: return null
+                    val lrcFile = File(path.substringBeforeLast('.') + ".lrc")
+                    if (lrcFile.exists()) return lrcFile.readText()
                 }
             }
         }
         return null
     }
 
+    /** 去掉 [mm:ss.xx] 时间标签，只保留歌词文本行。 */
     private fun stripLrcTimestamps(text: String): String {
         if (text.isBlank()) return ""
         val regex = Regex("""\[\d{2}:\d{2}[.:]\d{2,3}\]""")
