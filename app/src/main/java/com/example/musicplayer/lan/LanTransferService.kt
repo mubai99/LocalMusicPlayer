@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Handler
@@ -37,6 +38,14 @@ class LanTransferService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // 必须在 startForegroundService() 后立即调用 startForeground()，否则系统会杀进程
+        ServiceCompat.startForeground(
+            this,
+            NOTIFY_ID,
+            buildNotification("正在启动…", ""),
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
+        )
+
         if (intent?.action == ACTION_STOP) {
             stopService()
             return START_NOT_STICKY
@@ -62,7 +71,9 @@ class LanTransferService : Service() {
         val port = server!!.listeningPort
         val endpoint = "http://$ip:$port?token=$token"
         LanTransferController.publishRunning(endpoint, token)
-        startForeground(NOTIFY_ID, buildNotification(endpoint, token))
+        // 更新通知为实际链接
+        val nm = getSystemService(NotificationManager::class.java)
+        nm.notify(NOTIFY_ID, buildNotification(endpoint, token))
         resetIdle()
     }
 
@@ -130,13 +141,15 @@ class LanTransferService : Service() {
                 PendingIntent.FLAG_UPDATE_CURRENT
             },
         )
+        val text = if (token.isNotEmpty()) {
+            "链接：$endpoint\n配对码：$token"
+        } else {
+            "正在启动传歌服务…"
+        }
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("传歌服务运行中")
-            .setStyle(
-                NotificationCompat.BigTextStyle()
-                    .bigText("链接（其他设备浏览器打开）:\n$endpoint\n配对码: $token"),
-            )
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "停止", stopPi)
             .setOngoing(true)
             .build()

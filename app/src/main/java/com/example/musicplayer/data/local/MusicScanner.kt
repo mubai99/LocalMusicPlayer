@@ -4,15 +4,20 @@ import android.content.ContentUris
 import android.content.Context
 import android.net.Uri
 import android.provider.MediaStore
+import androidx.documentfile.provider.DocumentFile
 import com.example.musicplayer.data.model.Track
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * 通过 MediaStore 扫描本机音频。只读取音乐文件，过滤 <30s 的录音/片段。
+ * 通过 MediaStore 扫描本机音频，以及手动选择文件夹中的音频文件。
  * 全程本地，无网络。
  */
 class MusicScanner(private val context: Context) {
+
+    private val audioExtensions = setOf(
+        "mp3", "flac", "wav", "aac", "m4a", "ogg", "opus", "wma", "ape", "alac",
+    )
 
     suspend fun scan(): List<Track> = withContext(Dispatchers.IO) {
         val collection = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
@@ -63,5 +68,58 @@ class MusicScanner(private val context: Context) {
                 }
             }
         tracks
+    }
+
+    /**
+     * 从用户手动选择的文件夹（树 URI）递归扫描音频文件。
+     */
+    suspend fun scanFolders(treeUris: List<Uri>): List<Track> = withContext(Dispatchers.IO) {
+        val tracks = mutableListOf<Track>()
+        val seenUris = mutableSetOf<String>()
+
+        for (treeUri in treeUris) {
+            val tree = DocumentFile.fromTreeUri(context, treeUri) ?: continue
+            scanDirectory(tree, tracks, seenUris)
+        }
+        tracks
+    }
+
+    private fun scanDirectory(
+        dir: DocumentFile,
+        out: MutableList<Track>,
+        seen: MutableSet<String>,
+    ) {
+        val children = dir.listFiles()
+        for (child in children) {
+            if (child.isDirectory) {
+                scanDirectory(child, out, seen)
+            } else if (child.isFile && isAudioFile(child.name)) {
+                val uri = child.uri.toString()
+                if (uri in seen) continue
+                seen.add(uri)
+
+                val name = child.name ?: "未知"
+                val title = name.substringBeforeLast('.')
+                out.add(
+                    Track(
+                        id = "folder_${uri.hashCode()}",
+                        title = title,
+                        artist = "未知艺术家",
+                        album = "本地文件夹",
+                        albumId = 0L,
+                        durationMs = 0L,
+                        uri = child.uri,
+                        albumArtUri = null,
+                        dateAdded = child.lastModified(),
+                    )
+                )
+            }
+        }
+    }
+
+    private fun isAudioFile(name: String?): Boolean {
+        if (name == null) return false
+        val ext = name.substringAfterLast('.', "").lowercase()
+        return ext in audioExtensions
     }
 }
