@@ -113,6 +113,7 @@ fun Root(libraryVm: LibraryViewModel, playerVm: PlayerViewModel) {
         granted = g
         if (g) libraryVm.scan()
     }
+    val notifLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
         Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
 
@@ -122,6 +123,12 @@ fun Root(libraryVm: LibraryViewModel, playerVm: PlayerViewModel) {
             libraryVm.scan()
         } else {
             launcher.launch(permission)
+        }
+        // Android 13+ 请求通知权限（锁屏/通知栏媒体控制需要）
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
         }
     }
 
