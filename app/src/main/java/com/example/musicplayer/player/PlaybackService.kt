@@ -5,7 +5,6 @@ import android.content.Intent
 import android.os.Build
 import androidx.media3.common.AudioAttributes
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.example.musicplayer.MainActivity
@@ -29,11 +28,6 @@ class PlaybackService : MediaSessionService() {
 
         mediaSession = MediaSession.Builder(this, player)
             .setSessionActivity(buildContentIntent())
-            .setMediaNotificationProvider(
-                DefaultMediaNotificationProvider.Builder(this)
-                    .setSmallIcon(R.drawable.ic_notification)
-                    .build(),
-            )
             .build()
     }
 
