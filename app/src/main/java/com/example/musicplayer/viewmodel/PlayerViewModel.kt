@@ -157,7 +157,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     /**
-     * 提取歌词和内嵌封面：先试内嵌歌词，再找同名 .lrc 文件；
+     * 提取歌词和内嵌封面：查找同名 .lrc 文件；
      * 如果文件夹歌曲没有封面，尝试从文件中提取内嵌封面缓存。
      */
     private fun loadMetadata(track: Track) {
@@ -167,21 +167,18 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             var lyrics = ""
             var embeddedArt: ByteArray? = null
 
-            // 用 MediaMetadataRetriever 读取
+            // 用 MediaMetadataRetriever 读取内嵌封面
             runCatching {
                 val retriever = android.media.MediaMetadataRetriever()
                 retriever.setDataSource(context, track.uri)
-                lyrics = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_LYRICS) ?: ""
                 if (track.albumArtUri == null) {
                     embeddedArt = retriever.embeddedPicture
                 }
                 retriever.release()
             }
 
-            // 如果没有内嵌歌词，找同名 .lrc 文件
-            if (lyrics.isBlank()) {
-                lyrics = findLrcSidecar(context, track) ?: ""
-            }
+            // 找同名 .lrc 文件
+            lyrics = findLrcSidecar(context, track) ?: ""
 
             // 清理 .lrc 时间标签，只显示文本
             lyrics = stripLrcTimestamps(lyrics)
