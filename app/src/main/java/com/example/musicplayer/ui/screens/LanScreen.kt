@@ -97,7 +97,7 @@ fun LanScreen(libraryVm: LibraryViewModel) {
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "闲置 2 分钟自动关闭；也可点系统通知里的"停止"。",
+                        "闲置 2 分钟自动关闭；也可点系统通知里的\u201c停止\u201d。",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
