@@ -3,6 +3,7 @@ package com.example.musicplayer.viewmodel
 import android.app.Application
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import androidx.core.content.ContextCompat
@@ -87,7 +88,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private fun connect() {
         val context: Context = getApplication()
         // 确保播放服务已启动，MediaController 才能连上会话
-        context.startService(Intent(context, PlaybackService::class.java))
+        context.startForegroundService(Intent(context, PlaybackService::class.java))
         val sessionToken = SessionToken(context, ComponentName(context, PlaybackService::class.java))
         val controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
         controllerFuture.addListener({
