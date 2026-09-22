@@ -80,4 +80,7 @@ dependencies {
     implementation("org.nanohttpd:nanohttpd:2.3.1")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+    // DocumentFile —— 手动选择文件夹扫描音乐
+    implementation("androidx.documentfile:documentfile:1.0.1")
 }

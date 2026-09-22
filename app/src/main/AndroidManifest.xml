@@ -13,7 +13,7 @@
     <!-- 后台播放 / 局域网传歌的前台服务 -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <application
         android:name=".MusicPlayerApp"
@@ -45,11 +45,11 @@
             </intent-filter>
         </service>
 
-        <!-- 局域网传歌服务（本地设备互联） -->
+        <!-- 局域网传歌服务（本地文件传输） -->
         <service
             android:name=".lan.LanTransferService"
             android:exported="false"
-            android:foregroundServiceType="connectedDevice"
+            android:foregroundServiceType="dataSync"
             android:stopWithTask="false" />
 
     </application>
