@@ -183,16 +183,20 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             // 清理 .lrc 时间标签，只显示文本
             lyrics = stripLrcTimestamps(lyrics)
 
+            // 封面缓存文件写入放在 IO 线程
+            var artUri: Uri? = track.albumArtUri
+            if (embeddedArt != null && track.albumArtUri == null) {
+                runCatching {
+                    val cacheFile = File(context.cacheDir, "art_${track.id}.jpg")
+                    cacheFile.writeBytes(embeddedArt!!)
+                    artUri = Uri.fromFile(cacheFile)
+                }
+            }
+
             withContext(Dispatchers.Main) {
                 _lyrics.value = lyrics
-
-                // 如果有内嵌封面且当前没有封面 URI，缓存到文件
-                if (embeddedArt != null && track.albumArtUri == null) {
-                    runCatching {
-                        val cacheFile = File(context.cacheDir, "art_${track.id}.jpg")
-                        cacheFile.writeBytes(embeddedArt!!)
-                        _currentTrack.value = track.copy(albumArtUri = Uri.fromFile(cacheFile))
-                    }
+                if (artUri != track.albumArtUri) {
+                    _currentTrack.value = track.copy(albumArtUri = artUri)
                 }
             }
         }
