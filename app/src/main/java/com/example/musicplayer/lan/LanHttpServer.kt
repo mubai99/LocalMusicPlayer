@@ -5,8 +5,7 @@ import android.util.Log
 import fi.iki.elonen.NanoHTTPD
 import fi.iki.elonen.NanoHTTPD.IHTTPSession
 import fi.iki.elonen.NanoHTTPD.Response
-import fi.iki.elonen.NanoHTTPD.Status
-import java.io.File
+import fi.iki.elonen.NanoHTTPD.Response.Status
 import java.net.URLDecoder
 
 /**
@@ -29,11 +28,11 @@ class LanHttpServer(
         onActivity() // 每次请求都重置闲置计时器
 
         return when {
-            session.method == NanoHTTPD.Method.GET &&
+            session.method == Method.GET &&
                 (session.uri == "/" || session.uri == "/index.html") ->
                 newFixedLengthResponse(Status.OK, "text/html; charset=utf-8", PAGE_HTML)
 
-            session.method == NanoHTTPD.Method.POST && session.uri == "/upload" ->
+            session.method == Method.POST && session.uri == "/upload" ->
                 handleUpload(session)
 
             else ->
